@@ -54,6 +54,8 @@ def on_message(ws, message):
         "\nclose:     ", close,
         "\nvolume:    ", candle['v']
     )
+    if is_candle_closed:
+        print("\nCANDLE CLOSED AT {:.8f}".format(float(close)))
 
 while True:
     ws = websocket.WebSocketApp(SOCKET, on_open=on_open, on_close=on_close, on_message=on_message)
