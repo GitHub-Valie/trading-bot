@@ -12,8 +12,8 @@ closes = []
 in_position = False
 
 client = Client(
-    cf.binance['public_key'],
-    cf.binance['secret_key']
+    cf.binance_spot['public_key'],
+    cf.binance_spot['secret_key']
 )
 
 def order(side, quantity, symbol, order_type=ORDER_TYPE_MARKET):
