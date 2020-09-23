@@ -12,6 +12,10 @@ def Sum(list):
         sum += float(item['med'])
     return sum/len(list)
 
+# TODO: Add order function here
+
+# TODO: Add close position function here
+
 class Bot:
     def __init__(self, symbol, fast, slow):
         self.symbol = symbol
@@ -102,6 +106,7 @@ class Bot:
                     self.position = -1
         
         if config.production:
+            # TODO: Add stop-loss / take-profit logic here
             print('Take profit conditions and info')
 
         if self.position == 1 and self.candle[-1]['AweOsc'] < self.candle[-2]['AweOsc']:
