@@ -3,8 +3,8 @@ from binance.enums import ORDER_RESP_TYPE_RESULT, ORDER_TYPE_MARKET, SIDE_SELL, 
 import config
 
 client = Client(
-    api_key = config.binance_futures['public_key'],
-    api_secret = config.binance_futures['secret_key']
+    api_key = config.binance['public_key'],
+    api_secret = config.binance['secret_key']
 )
 
 # client.API_URL = 'https://testnet.binancefuture.com/en/futures/BTC_USDT'

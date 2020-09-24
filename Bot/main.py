@@ -4,8 +4,8 @@ import pandas as pd
 from binance.client import Client
 
 client = Client(
-    api_key = config.binance_futures['public_key'],
-    api_secret = config.binance_futures['secret_key']
+    api_key = config.binance['public_key'],
+    api_secret = config.binance['secret_key']
 )
 
 # client.API_URL = 'https://testnet.binancefuture.com/en/futures/BTC_USDT'
