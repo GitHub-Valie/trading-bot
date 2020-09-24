@@ -19,12 +19,15 @@ for bot in config_bot.bots:
     bots[-1]['bot'] = class_bot.Bot(
         bot['pair'],
         bot['fast_trend'],
-        bot['slow_trend']
+        bot['slow_trend'],
+        bot['leverage'],
+        bot['percentage'],
+        bot['precision']
     )
     socket += bot['pair'].lower() + "@kline_1m/"
     print('Bot: {}'.format(bot))
 
-print('Socket: {}'.format(socket))
+# print('Socket: {}'.format(socket))
 
 def on_open(ws):
     print('Opened Connection')
