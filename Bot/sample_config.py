@@ -1,10 +1,5 @@
 # Register: https://www.binance.com/en/register?ref=41365013
-binance_spot = {
-    'public_key' : 'your_public_key',
-    'secret_key' : 'your_private_key',
-}
-
-binance_futures = {
+binance = {
     'public_key' : 'your_public_key',
     'secret_key' : 'your_private_key',
 }
