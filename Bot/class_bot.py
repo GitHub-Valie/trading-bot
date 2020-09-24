@@ -7,6 +7,8 @@ client = Client(
     api_secret = config.binance_futures['secret_key']
 )
 
+# client.API_URL = 'https://testnet.binancefuture.com/en/futures/BTC_USDT'
+
 def Sum(list):
     sum = 0
     for item in list:
@@ -22,6 +24,7 @@ def Order(Symbol, Leverage, Precision, Percentage, Side, Price):
     if config.production:
         futures_account = client.futures_account()
         Quantity = float(Percentage) / 100 * float(futures_account['totalWalletBalance']) / float(Price)
+        
         if Quantity > 0:
             client.futures_change_leverage(
                 symbol = Symbol,
@@ -35,8 +38,12 @@ def Order(Symbol, Leverage, Precision, Percentage, Side, Price):
                 quantity = Quantity
             )
             return close
+        
+        else:
+            print('No funds on account')
+    
     else:
-            print('TEST NEW ORDER')
+        print('TEST NEW ORDER')
 
 def ClosePosition(Symbol, Side, Quantity):
     '''
@@ -52,10 +59,12 @@ def ClosePosition(Symbol, Side, Quantity):
             quantity = Quantity
         )
         return close
+    
     else:
         print('TEST CLOSE POSITION')
 
 class Bot:
+
     def __init__(self, symbol, fast, slow, leverage, precision, percentage):
         self.symbol = symbol
         self.fast = fast
@@ -140,7 +149,9 @@ class Bot:
         if self.position == 0: # Not in position
 
             if (self.data[-1]['AweOsc'] > self.data[-2]['AweOsc'] < self.data[-3]['AweOsc']): # Long condition
+
                 if config.production:
+
                     try:
                         trade = Order(
                             Symbol=self.symbol,
@@ -157,15 +168,19 @@ class Bot:
                         self.position = 1
                         # mongodb insert
                         print('LIVE ORDER | LONG POSITION | BUYING {}'.format(self.symbol))
+                    
                     except Exception as e:
                         print('{}: Error {}'.format(self.symbol, e))
                         pass
+                
                 else:
                     print('TEST ORDER | LONG POSITION | BUYING {}'.format(self.symbol))
                     self.position = 1
         
             if (self.data[-1]['AweOsc'] < self.data[-2]['AweOsc'] > self.data[-3]['AweOsc']): # Short condition
+                
                 if config.production:
+                    
                     try:
                         trade = Order(
                             Symbol=self.symbol,
@@ -182,8 +197,10 @@ class Bot:
                         self.position = -1
                         # mongodb insert
                         print('LIVE ORDER | SHORT POSITION | SELLING {}'.format(self.symbol))
+                    
                     except Exception as e:
                         print('{}: Error {}'.format(self.symbol, e))
+                
                 else:
                     print('TEST ORDER | SHORT POSITION | SELLING {}'.format(self.symbol))
                     self.position = -1

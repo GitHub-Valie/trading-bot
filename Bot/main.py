@@ -8,6 +8,8 @@ client = Client(
     api_secret = config.binance_futures['secret_key']
 )
 
+# client.API_URL = 'https://testnet.binancefuture.com/en/futures/BTC_USDT'
+
 socket = "wss://fstream3.binance.com/stream?streams="
 
 print('Instantiating bots ...')
