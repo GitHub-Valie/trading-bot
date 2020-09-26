@@ -1,0 +1,44 @@
+<html>
+    <head>
+        <title>
+            {{ title }}
+        </title>
+    </head>
+    <body>
+        <h2>Spot</h2>
+        
+        <table>
+            {% for item in spot_balance %}
+            <tr>
+                <td>
+                    {{item['Assets']}}
+                </td>
+                <td>
+                    {{item['Free']}}
+                </td>
+                <td>
+                    {{item['Value']}} $
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        Total Spot Balance: {{spot_total}} $
+
+        <h2>Futures</h2>
+
+        {% for my_future_position in my_future_position %}
+            {{my_future_position['Market']}}
+            {{my_future_position['Side']}}
+            {{my_future_position['Entry']}} $
+            {{my_future_position['Leverage']}}
+            {{my_future_position['PNL']}} $
+        {% endfor %}
+
+        Current Futures Wallet Balance: {{ my_future['totalMarginBalance'] }} $
+
+        <h2>Total Balance</h2>
+
+        {{ grand_total }} $
+    </body>
+</html>
