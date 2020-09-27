@@ -1,10 +1,10 @@
-from flask import Flask, render_template
+import flask
 import pandas as pd
 import config
 from binance.client import Client
 from binance.websockets import BinanceSocketManager
 
-app = Flask(__name__)
+app = flask.Flask(__name__)
 
 client = Client(
     config.binance['public_key'],
@@ -13,7 +13,7 @@ client = Client(
 
 @app.route('/')
 def index ():
-    title = 'BinanceTradingBot'
+    title = 'BinanceTradingApp'
     futures_account = client.futures_account()
     position = futures_account['positions']
     positions = []
@@ -35,8 +35,7 @@ def index ():
     spot_account = client.get_account()
     balance = spot_account['balances']
 
-    for balance in balance:
-        
+    for balance in balance: 
         if (balance['free'] != '0.00000000') and (balance['free'] != '0.00'):
             spot_balance.append({'Assets': balance['asset'],
                                'Free': balance['free'],
@@ -63,13 +62,18 @@ def index ():
     spot_total = round(spot_total, 4)
     grand_total = round(spot_total + float(futures_account['totalMarginBalance']), 4)
     
-    return render_template(
-        'index.html', 
-        title=title, 
-        spot_balance=spot_balance, 
-        pnl=pnl, 
-        spot_total=spot_total, 
-        grand_total=grand_total, 
-        my_future_position=positions,
-        my_future=futures_account
+    return flask.render_template(
+        'index.html',
+        title=title,
+        token='hello flask+react',
+        pnl=pnl,
+        futures_account=futures_account,
+        spot_balance=spot_balance,
+        spot_total=spot_total,
+        grand_total=grand_total,
+        my_future_position=positions
     )
+
+# @app.errorhandler(404)
+# def not_found(e):
+#     return app.send_static_file('index.html')
