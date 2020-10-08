@@ -1,4 +1,5 @@
-python-binance
-websocket_client
 numpy
 pandas
+pymongo
+python-binance
+websocket_client
