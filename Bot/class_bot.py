@@ -1,6 +1,7 @@
 from binance.client import Client
 from binance.enums import ORDER_RESP_TYPE_RESULT, ORDER_TYPE_MARKET, SIDE_SELL, SIDE_BUY
 import config
+import mongo
 
 client = Client(
     api_key = config.binance['public_key'],
@@ -131,7 +132,7 @@ class Bot:
                 'low' : float(kline['l']),
                 'close' : float(kline['c']),
                 'time_close' : kline['T'],
-                'AweOsc' : Sum(self.data[-self.fast:])-Sum(self.data[-self.slow:])
+                'AweOsc' : Sum(self.data[-self.fast:]) - Sum(self.data[-self.slow:])
             })
         
         else:
@@ -146,13 +147,13 @@ class Bot:
                 'AweOsc' : Sum(self.data[-self.fast:])-Sum(self.data[-self.slow:])
             }
 
-        if self.position == 0: # Not in position
+        if self.position == 0: # If we're not in position (Condition Z)
 
-            if (self.data[-1]['AweOsc'] > self.data[-2]['AweOsc'] < self.data[-3]['AweOsc']): # Long condition
+            if (self.data[-1]['AweOsc'] > self.data[-2]['AweOsc'] < self.data[-3]['AweOsc']): # Z1: If long condition is met
 
-                if config.production:
+                if config.production: # Only if we're in 'production mode'
 
-                    try:
+                    try: # Try taking long position: BUY
                         trade = Order(
                             Symbol=self.symbol,
                             Leverage=self.leverage,
@@ -166,7 +167,14 @@ class Bot:
                         self.price_open = float(trade['avgPrice'])
                         self.time_open = trade['updateTime']
                         self.position = 1
-                        # mongodb insert
+                        mongo.db_insert(
+                            self.symbol,
+                            self.time_open,
+                            self.price_open,
+                            self.qtity,
+                            trade['side'],
+                            self.fees_open
+                        )
                         print('LIVE ORDER | LONG POSITION | BUYING {}'.format(self.symbol))
                     
                     except Exception as e:
@@ -177,11 +185,11 @@ class Bot:
                     print('TEST ORDER | LONG POSITION | BUYING {}'.format(self.symbol))
                     self.position = 1
         
-            if (self.data[-1]['AweOsc'] < self.data[-2]['AweOsc'] > self.data[-3]['AweOsc']): # Short condition
+            elif (self.data[-1]['AweOsc'] < self.data[-2]['AweOsc'] > self.data[-3]['AweOsc']): # Z2: If short condition is met
                 
-                if config.production:
+                if config.production: # Only if we're in 'production mode'
                     
-                    try:
+                    try: # Try taking short position: SELL
                         trade = Order(
                             Symbol=self.symbol,
                             Leverage=self.leverage,
@@ -195,7 +203,14 @@ class Bot:
                         self.price_open = float(trade['avgPrice'])
                         self.time_open = trade['updateTime']
                         self.position = -1
-                        # mongodb insert
+                        mongo.db_insert(
+                            self.symbol,
+                            self.time_open,
+                            self.price_open,
+                            self.qtity,
+                            trade['side'],
+                            self.fees_open
+                        )
                         print('LIVE ORDER | SHORT POSITION | SELLING {}'.format(self.symbol))
                     
                     except Exception as e:
@@ -205,11 +220,187 @@ class Bot:
                     print('TEST ORDER | SHORT POSITION | SELLING {}'.format(self.symbol))
                     self.position = -1
         
-        if config.production: # In production mode
-            
-            if self.position == 1 and self.take_profit == 0: # If we're in long position and no TP yet
+            else: # Z3: If neither condition is met, simply pass
                 
-                if ((self.data[-1]['close'] - self.price_open) / self.price_open) * self.leverage > 0.035:
+                pass
+
+        elif self.position == 1:  # If we're in long position (Condition X)
+        
+            if self.data[-1]['AweOsc'] < self.data[-2]['AweOsc']: # X1: And if short condition is met...
+                
+                if config.production: # Only if we're in 'production mode'
+                    
+                    try: # Try closing long position and opening a short position
+                        tmp = ClosePosition(
+                            Symbol=self.symbol, 
+                            Side = SIDE_SELL, 
+                            Quantity=self.qtity
+                        )
+                        trade = Order(
+                            Symbol=self.symbol, 
+                            Leverage=self.leverage, 
+                            Precision=self.precision, 
+                            Percentage=self.percentage, 
+                            Side=SIDE_SELL, 
+                            Price=self.data[-1]['close']
+                        )
+                        self.fees_close = float(tmp['executedQty']) * float(tmp['avgPrice']) * 0.00035
+                        self.fees_total = self.fees_open + self.fees_close
+                        self.price_close = float(tmp['avgPrice'])
+                        self.pnl_gross = (self.price_close - self.price_open)*self.qtity
+                        self.pnl = self.pnl_gross - self.fees_total
+                        mongo.db_update(
+                            self.symbol,
+                            self.time_open,
+                            tmp['updateTime'],
+                            self.price_close,
+                            self.fees_close,
+                            self.pnl
+                        )
+                        self.qtity = float(trade['executedQty'])
+                        self.price_open = float(trade['avgPrice'])
+                        self.time_open = trade['updateTime']
+                        self.fees_open = float(trade['executedQty']) * float(trade['avgPrice']) * 0.00035
+                        self.position = -1
+                        mongo.db_insert(
+                            self.symbol, 
+                            self.time_open,
+                            self.price_open,
+                            self.qtity,
+                            trade['side'],
+                            self.fees_open
+                        )
+                        print('{} | CLOSING LONG POSITION, OPENING SHORT | PNL: {}'.format(self.symbol, self.pnl))
+
+                    except Exception as e:
+                            print('{}: Error {}'.format(self.symbol, e))
+                            pass
+                
+                else: # If we're not in 'production mode'
+                    print('SYMBOL : {} | TEST ORDER | CLOSING LONG POSITION, OPENING SHORT'.format(self.symbol))
+                    self.position = -1
+
+            elif ((float(self.data[-1]['close']) - self.price_open) / self.price_open) * self.leverage < -0.03: # X2: And if stop loss condition is met...
+
+                tmp = ClosePosition(
+                    Symbol = self.symbol, 
+                    Side = SIDE_SELL, 
+                    Quantity= self.qtity
+                )
+                self.fees_close = float(tmp['executedQty']) * float(tmp['avgPrice']) * 0.00035
+                self.fees_total = self.fees_open + self.fees_close
+                self.price_close = float(tmp['avgPrice'])
+                self.pnl_gross = (self.price_close - self.price_open) * self.quantity_take_profit
+                self.pnl = self.pnl_gross - self.fees_total
+                mongo.db_update(
+                    self.symbol,
+                    self.time_open,
+                    tmp['updateTime'],
+                    self.price_close,
+                    self.fees_close,
+                    self.pnl
+                )
+                self.take_profit = 0
+                self.position = 0
+                print("{} | LONG POSITION | STOP LOSS".format(self.symbol))
+
+            else: # X3: PASS
+
+                pass
+
+        elif self.position == -1: # If we're in short position (Condition Y)
+            
+            if self.data[-1]['AweOsc'] > self.data[-2]['AweOsc']: # Y1: And if long condition is met ...
+            
+                if config.production: # Only if we're in 'production mode'
+
+                    try: # Try closing short position and opening a long position
+                        tmp = ClosePosition(
+                            Symbol=self.symbol, 
+                            Side = SIDE_BUY, 
+                            Quantity=self.qtity
+                        )
+                        trade = Order(
+                            Symbol=self.symbol, 
+                            Leverage=self.leverage, 
+                            Precision=self.precision, 
+                            Percentage=self.percentage, 
+                            Side=SIDE_BUY, 
+                            Price=self.data[-1]['close']
+                        )
+                        self.fees_close = float(tmp['executedQty']) * float(tmp['avgPrice']) * 0.00035
+                        self.fees_total = self.fees_open + self.fees_close
+                        self.price_close = float(tmp['avgPrice'])
+                        self.pnl_gross = (self.price_close - self.price_open) * self.qtity
+                        self.pnl = self.pnl_gross - self.fees_total
+                        mongo.db_update(
+                            self.symbol,
+                            self.time_open,
+                            tmp['updateTime'],
+                            self.price_close,
+                            self.fees_close,
+                            self.pnl
+                        )
+                        self.qtity = float(trade['executedQty'])
+                        self.price_open = float(trade['avgPrice'])
+                        self.time_open = trade['updateTime']
+                        self.fees_open = float(trade['executedQty']) * float(trade['avgPrice']) * 0.00035
+                        self.position = 1
+                        mongo.db_insert(
+                            self.symbol, 
+                            self.time_open,
+                            self.price_open,
+                            self.qtity,
+                            trade['side'],
+                            self.fees_open
+                        )
+                        print('{} | CLOSING SHORT POSITION, OPENING LONG | PNL: {}'.format(self.symbol, self.pnl))
+                    
+                    except Exception as e:
+                        print('{}: Error {}'.format(self.symbol, e))
+                        pass
+                
+                else: # If we're not in 'production mode'
+                    print('SYMBOL : {} | TEST ORDER | CLOSING SHORT POSITION, OPENING LONG'.format(self.symbol))
+                    self.position = 1
+
+            elif ((float(self.data[-1]['close']) - self.price_open) / self.price_open) * self.leverage > 0.03: # Y2: And if stop loss condition is met...
+                
+                tmp = ClosePosition(
+                    Symbol=self.symbol, 
+                    Side=SIDE_BUY, 
+                    Quantity=self.qtity
+                )
+                self.fees_close = float(tmp['executedQty']) * float(tmp['avgPrice']) * 0.00035
+                self.fees_total = self.fees_open + self.fees_close
+                self.price_close = float(tmp['avgPrice'])
+                self.pnl_gross = (self.price_open - self.price_close) * self.quantity_take_profit
+                self.pnl = self.pnl_gross - self.fees_total
+                mongo.db_update(
+                    self.symbol,
+                    self.time_open,
+                    tmp['updateTime'],
+                    self.price_close,
+                    self.fees_close,
+                    self.pnl
+                )
+                self.take_profit = 0
+                self.position = 0
+                print("{} | SHORT POSITION | STOP LOSS".format(self.symbol))
+
+            else: #Y3: PASS
+
+                pass
+
+        else: # If neither condition is met (Condition W)
+
+            pass
+
+        if config.production: # A: Only if we are in 'production mode'
+            
+            if self.position == 1 and self.take_profit == 0: # A1: If we're in long position and did not placed a take profit order yet
+                
+                if ((self.data[-1]['close'] - self.price_open) / self.price_open) * self.leverage > 0.035: # If take profit condition is met
                     # TODO: Quantity
                     self.quantity_take_profit = round(self.qtity / 2, self.precision)
                     self.qtity = self.qtity - self.quantity_take_profit
@@ -222,13 +413,24 @@ class Bot:
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = self.price_close - self.price_open * self.quantity_take_profit
                     self.pnl = self.pnl_gross - self.fees_close
-
+                    mongo.db_update_tp(
+                        self.symbol,
+                        self.time_open,
+                        tmp['updateTime'],
+                        self.price_close,
+                        self.fees_close,
+                        self.pnl
+                    )
                     self.take_profit = 1
                     print('TAKING PROFIT FOR LONG POSITION ON {} | PNL: {}'.format(self.symbol, self.pnl))
-            
-            if self.position == -1 and self.take_profit == 0: # If we're in short position and no TP yet
                 
-                if ((self.data[-1]['close'] - self.price_open) / self.price_open) * self.leverage < -0.035:
+                else: # Take profit condition is not met
+
+                    pass
+            
+            elif self.position == -1 and self.take_profit == 0: # A2: If we're in short position and did not placed a take profit order yet
+                
+                if ((self.data[-1]['close'] - self.price_open) / self.price_open) * self.leverage < -0.035: # If take profit condition is met
                     # TODO: Quantity
                     self.quantity_take_profit = round(self.qtity / 2, self.precision)
                     self.qtity = self.qtity - self.quantity_take_profit
@@ -240,14 +442,25 @@ class Bot:
                     self.fees_close = float(tmp['executedQty']) * float(tmp['avgPrice']) *  0.00035
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = self.price_close - self.price_open * self.quantity_take_profit
-                    self.pnl = self.pnl_gross - self.total_fees # or self.fees_close ?
-
+                    self.pnl = self.pnl_gross - self.fees_close # or self.fees_close ?
+                    mongo.db_update_tp(
+                        self.symbol,
+                        self.time_open,
+                        tmp['updateTime'],
+                        self.price_close,
+                        self.fees_close,
+                        self.pnl
+                    )
                     self.take_profit = 1
                     print('TAKING PROFIT FOR SHORT POSITION ON {} | PNL: {}'.format(self.symbol, self.pnl))
             
-            if self.position == 1 and self.take_profit == 1: # If we're in long position and in TP
+                else: # Take profit condition is not met
+                    
+                    pass
+
+            elif self.position == 1 and self.take_profit == 1: # A3: If we're in long position and already placed a take profit order
                 
-                if ((float(self.data[-1]['close']) - self.price_open) / self.price_open) * self.leverage > 0.05 : # High Save profit
+                if ((float(self.data[-1]['close']) - self.price_open) / self.price_open) * self.leverage > 0.05 : # If high save profit condition is met
                     # TODO : Quantity
                     tmp = ClosePosition(
                         Symbol = self.symbol, 
@@ -259,12 +472,19 @@ class Bot:
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = (self.price_close - self.price_open) * self.quantity_take_profit
                     self.pnl = self.pnl_gross - self.fees_total
-                    
+                    mongo.db_update(
+                        self.symbol,
+                        self.time_open,
+                        tmp['updateTime'],
+                        self.price_close,
+                        self.fees_close,
+                        self.pnl
+                    )
                     self.take_profit = 0
                     self.position = 0
-                    print('CLOSING HIGH SAVE FOR {} | PNL: {}'.format(self.symbol, self.pnl))
+                    print('{} (HIGH SAVE) CLOSING LONG POSITION | PNL: {}'.format(self.symbol, self.pnl))
                 
-                elif ((float(self.data[-1]['close']) - self.price_open) / self.price_open) * self.leverage < 0.01: # Low save profit
+                elif ((float(self.data[-1]['close']) - self.price_open) / self.price_open) * self.leverage < 0.01: # If low save profit condition is met
                     tmp = ClosePosition(
                         Symbol=self.symbol,
                         Side=SIDE_SELL,
@@ -275,18 +495,25 @@ class Bot:
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = (self.price_close - self.price_open) * self.quantity_take_profit
                     self.pnl = self.pnl_gross - self.fees_total
-                    # mongodb insert
+                    mongo.db_update(
+                        self.symbol,
+                        self.time_open,
+                        tmp['updateTime'],
+                        self.price_close,
+                        self.fees_close,
+                        self.pnl
+                    )
                     self.take_profit = 0
                     self.position = 0
-                    print('CLOSING LOW SAVE FOR {} | PNL: {}'.format(self.symbol, self.pnl))
+                    print('{} (LOW SAVE) CLOSING LONG POSITION | PNL: {}'.format(self.symbol, self.pnl))
 
-                else: # Between .01 and .05
+                else: # If neither save profit condition is met, pass (Between .05 and .01)
                     
                     pass
 
-            if self.position == -1 and self.take_profit == 1: # If we're in short position and in TP
+            elif self.position == -1 and self.take_profit == 1: # A4: If we're in short position and already placed a take profit
 
-                if ((float(self.data[-1]['close']) - self.price_open) / self.price_open) * self.leverage < -0.05: # High Save profit
+                if ((float(self.data[-1]['close']) - self.price_open) / self.price_open) * self.leverage < -0.05: # If high save profit condition is met
                     tmp = ClosePosition(
                         Symbol=self.symbol,
                         Side=SIDE_BUY,
@@ -297,12 +524,19 @@ class Bot:
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = (self.price_open - self.price_close) * self.quantity_take_profit
                     self.pnl = self.pnl_gross - self.fees_total
-                    # mongodb insert
+                    mongo.db_update(
+                        self.symbol,
+                        self.time_open,
+                        tmp['updateTime'],
+                        self.price_close,
+                        self.fees_close,
+                        self.pnl
+                    )
                     self.take_profit = 0
                     self.position = 0
-                    print('CLOSING HIGH SAVE FOR {} | PNL: {}'.format(self.symbol, self.pnl))
+                    print('{} (HIGH SAVE) CLOSING SHORT POSITION | PNL: {}'.format(self.symbol, self.pnl))
 
-                elif ((float(self.data[-1]['close']) - self.price_open) / self.price_open) * self.leverage > -0.01: # Low Save profit
+                elif ((float(self.data[-1]['close']) - self.price_open) / self.price_open) * self.leverage > -0.01: # If low save profit condition is met
                     tmp = ClosePosition(
                         Symbol=self.symbol,
                         Side=SIDE_SELL,
@@ -313,92 +547,26 @@ class Bot:
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = (self.price_open - self.price_close) * self.quantity_take_profit
                     self.pnl = self.pnl_gross - self.fees_total
-                    # mongodb insert
+                    mongo.db_update(
+                        self.symbol,
+                        self.time_open,
+                        tmp['updateTime'],
+                        self.price_close,
+                        self.fees_close,
+                        self.pnl
+                    )
                     self.take_profit = 0
                     self.position = 0
-                    print('CLOSING LOW SAVE FOR {} | PNL: {}'.format(self.symbol, self.pnl))
+                    print('{} (LOW SAVE) CLOSING SHORT POSITION | PNL: {}'.format(self.symbol, self.pnl))
                 
-                else: # Between -.05 and -.01
+                else: # If neither save profit condition is met, pass (Between -.05 and -.01)
 
                     pass
-
-        if self.position == 1 and self.data[-1]['AweOsc'] < self.data[-2]['AweOsc']: # If we're in long position and crossing under
             
-            if config.production:
-                
-                try:
-                    tmp = ClosePosition(
-                        Symbol=self.symbol, 
-                        Side = SIDE_SELL, 
-                        Quantity=self.qtity
-                    )
-                    trade = Order(
-                        Symbol=self.symbol, 
-                        Leverage=self.leverage, 
-                        Precision=self.precision, 
-                        Percentage=self.percentage, 
-                        Side=SIDE_SELL, 
-                        Price=self.data[-1]['close']
-                    )
-                    self.fees_close = float(tmp['executedQty']) * float(tmp['avgPrice']) * 0.00035
-                    self.fees_total = self.fees_open + self.fees_close
-                    self.price_close = float(tmp['avgPrice'])
-                    self.pnl_gross = (self.price_close - self.price_open)*self.qtity
-                    self.pnl = self.pnl_gross - self.fees_total
-                    # mongodb insert
-                    self.qtity = float(trade['executedQty'])
-                    self.price_open = float(trade['avgPrice'])
-                    self.time_open = trade['updateTime']
-                    self.fees_open = float(trade['executedQty']) * float(trade['avgPrice']) * 0.00035
-                    self.position = -1
-                    # mongodb insert
-                    print('LIVE ORDER | {} CLOSING LONG POSITION, OPENING SHORT | PNL: {}'.format(self.symbol, self.pnl))
+            else: # A5: While in 'production mode' if neither of these combinations of conditions is met, simply pass
 
-                except Exception as e:
-                        print('{}: Error {}'.format(self.symbol, e))
-                        pass
-            
-            else:
-                print('TEST ORDER | CLOSING LONG POSITION, OPENING SHORT | SYMBOL : {}'.format(self.symbol))
-                self.position = -1
+                pass
 
-        if self.position == -1 and self.data[-1]['AweOsc'] > self.data[-2]['AweOsc']: # If we're in short position and crossing over
-            
-            if config.production:
+        else: # B: If we're not in 'production mode' simply pass
 
-                try:
-                    tmp = ClosePosition(
-                        Symbol=self.symbol, 
-                        Side = SIDE_BUY, 
-                        Quantity=self.qtity
-                    )
-                    trade = Order(
-                        Symbol=self.symbol, 
-                        Leverage=self.leverage, 
-                        Precision=self.precision, 
-                        Percentage=self.percentage, 
-                        Side=SIDE_BUY, 
-                        Price=self.data[-1]['close']
-                    )
-                    self.fees_close = float(tmp['executedQty']) * float(tmp['avgPrice']) * 0.00035
-                    self.fees_total = self.fees_open + self.fees_close
-                    self.price_close = float(tmp['avgPrice'])
-                    self.pnl_gross = (self.price_close - self.price_open) * self.qtity
-                    self.pnl = self.pnl_gross - self.fees_total
-                    # mongodb insert
-                    self.qtity = float(trade['executedQty'])
-                    self.price_open = float(trade['avgPrice'])
-                    self.time_open = trade['updateTime']
-                    self.fees_open = float(trade['executedQty']) * float(trade['avgPrice']) * 0.00035
-                    self.position = 1
-                    # mongodb insert
-                    print('LIVE ORDER | {} CLOSING SHORT POSITION, OPENING LONG | PNL: {}'.format(self.symbol, self.pnl))
-                
-                except Exception as e:
-                    print('{}: Error {}'.format(self.symbol, e))
-                    pass
-            
-            else:
-                print('TEST ORDER | CLOSING SHORT POSITION, OPENING LONG | SYMBOL : {}'.format(self.symbol))
-                self.position = 1
-
+            pass 
