@@ -39,12 +39,13 @@ def on_close(ws):
 
 def on_message(ws, message):
     json_message = json.loads(message)
-    candle = json_message['data']['k']
-    for bot in bots:
-        if bot['pair'] == candle['s']:
-            # print(candle)
-            bot['bot'].next(candle)
-            break # Breaks the execution of the for loop
+    data = json_message['data']['k']
+    if data['x'] == True: # If the data comes from a closed candle
+        for bot in bots:
+            if bot['pair'] == data['s']: # And if the candle's pairs match each bots respective pair
+                # print(data)
+                bot['bot'].next(data)
+                break # Breaks the execution of the for loop
 
 ws = websocket.WebSocketApp(
     socket, 
