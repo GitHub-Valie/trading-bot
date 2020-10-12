@@ -26,7 +26,7 @@ for bot in config_bot.bots:
         bot['percentage'],
         bot['precision']
     )
-    socket += bot['pair'].lower() + "@kline_1m/"
+    socket += bot['pair'].lower() + "@kline_1h/"
     print('Bot: {}'.format(bot))
 
 # print('Socket: {}'.format(socket))
@@ -40,12 +40,11 @@ def on_close(ws):
 def on_message(ws, message):
     json_message = json.loads(message)
     data = json_message['data']['k']
-    if data['x'] == True: # If the data comes from a closed candle
-        for bot in bots:
-            if bot['pair'] == data['s']: # And if the candle's pairs match each bots respective pair
-                # print(data)
-                bot['bot'].next(data)
-                break # Breaks the execution of the for loop
+    for bot in bots:
+        if bot['pair'] == data['s']: # And if the candle's pairs match each bots respective pair
+            # print(data)
+            bot['bot'].next(data)
+            break # Breaks the execution of the for loop
 
 ws = websocket.WebSocketApp(
     socket, 
