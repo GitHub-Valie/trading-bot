@@ -23,14 +23,19 @@ def Order(Symbol, Leverage, Precision, Percentage, Side, Price):
     quantity based on the user's total wallet balance given by ```futures_account['totalWalletBalance']```
     '''
     if config.production:
+        
         futures_account = client.futures_account()
         Quantity = float(Percentage) / 100 * float(futures_account['totalWalletBalance']) / float(Price)
         
         if Quantity > 0:
+            
             client.futures_change_leverage(
                 symbol = Symbol,
                 leverage = Leverage
             )
+            
+            Quantity = round((Quantity * Leverage), Precision)
+            
             close = client.futures_create_order(
                 symbol = Symbol,
                 side = Side,
@@ -38,12 +43,15 @@ def Order(Symbol, Leverage, Precision, Percentage, Side, Price):
                 type = ORDER_TYPE_MARKET,
                 quantity = Quantity
             )
+            
             return close
         
         else:
+            
             print('No funds on account')
     
     else:
+        
         print('TEST NEW ORDER')
 
 def ClosePosition(Symbol, Side, Quantity):
@@ -52,6 +60,7 @@ def ClosePosition(Symbol, Side, Quantity):
     will create an order ```ORDER_TYPE_MARKET``` to close the current position on the market.
     '''
     if config.production:
+        
         close = client.futures_create_order(
             symbol = Symbol,
             side = Side,
@@ -59,9 +68,11 @@ def ClosePosition(Symbol, Side, Quantity):
             type = ORDER_TYPE_MARKET,
             quantity = Quantity
         )
+        
         return close
     
     else:
+        
         print('TEST CLOSE POSITION')
 
 class Bot:
