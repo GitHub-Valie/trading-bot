@@ -1,9 +1,11 @@
 FROM python:3
 
-ADD *.py /
+RUN mkdir Bot
 
-ADD requirements.txt ./
+COPY Bot/*.py /
+
+ADD requirements.txt /
 
 RUN pip install -r requirements.txt
 
-CMD [ "python", "main.py" ]
+CMD [ "python", "./main.py" ]
