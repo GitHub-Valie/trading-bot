@@ -1,6 +1,6 @@
 numpy
 pandas
-pymongo
-pymongo[srv]
+# pymongo
+# pymongo[srv]
 python-binance
 websocket_client
