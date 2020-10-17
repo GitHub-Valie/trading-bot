@@ -9,8 +9,8 @@ bots = [ # Bots is a list of dictionaries that contain the respective currency p
     },
     {
         'pair' : 'XRPUSDT',
-        'fast_trend' : 72,
-        'slow_trend' : 22,
+        'fast_trend' : 19,
+        'slow_trend' : 23,
         'leverage' : 1,
         'percentage' : 10,
         'precision' : 1,
