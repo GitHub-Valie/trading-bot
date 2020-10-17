@@ -2,5 +2,5 @@ version: '2'
 
 services:
   trading_bot:
-    container_name: trading_bot
+    container_name: binance-trading-bot
     build: .
