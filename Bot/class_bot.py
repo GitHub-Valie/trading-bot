@@ -1,7 +1,7 @@
 from binance.client import Client
 from binance.enums import ORDER_RESP_TYPE_RESULT, ORDER_TYPE_MARKET, SIDE_SELL, SIDE_BUY
 import config
-import mongo
+# import mongo
 
 client = Client(
     api_key = config.binance['public_key'],
@@ -178,14 +178,14 @@ class Bot:
                         self.price_open = float(trade['avgPrice'])
                         self.time_open = trade['updateTime']
                         self.position = 1
-                        mongo.db_insert(
-                            self.symbol,
-                            self.time_open,
-                            self.price_open,
-                            self.qtity,
-                            trade['side'],
-                            self.fees_open
-                        )
+                        # mongo.db_insert(
+                        #     self.symbol,
+                        #     self.time_open,
+                        #     self.price_open,
+                        #     self.qtity,
+                        #     trade['side'],
+                        #     self.fees_open
+                        # )
                         print('LIVE ORDER | LONG POSITION | BUYING {}'.format(self.symbol))
                     
                     except Exception as e:
@@ -214,14 +214,14 @@ class Bot:
                         self.price_open = float(trade['avgPrice'])
                         self.time_open = trade['updateTime']
                         self.position = -1
-                        mongo.db_insert(
-                            self.symbol,
-                            self.time_open,
-                            self.price_open,
-                            self.qtity,
-                            trade['side'],
-                            self.fees_open
-                        )
+                        # mongo.db_insert(
+                        #     self.symbol,
+                        #     self.time_open,
+                        #     self.price_open,
+                        #     self.qtity,
+                        #     trade['side'],
+                        #     self.fees_open
+                        # )
                         print('LIVE ORDER | SHORT POSITION | SELLING {}'.format(self.symbol))
                     
                     except Exception as e:
@@ -260,27 +260,27 @@ class Bot:
                         self.price_close = float(tmp['avgPrice'])
                         self.pnl_gross = (self.price_close - self.price_open)*self.qtity
                         self.pnl = self.pnl_gross - self.fees_total
-                        mongo.db_update(
-                            self.symbol,
-                            self.time_open,
-                            tmp['updateTime'],
-                            self.price_close,
-                            self.fees_close,
-                            self.pnl
-                        )
+                        # mongo.db_update(
+                        #     self.symbol,
+                        #     self.time_open,
+                        #     tmp['updateTime'],
+                        #     self.price_close,
+                        #     self.fees_close,
+                        #     self.pnl
+                        # )
                         self.qtity = float(trade['executedQty'])
                         self.price_open = float(trade['avgPrice'])
                         self.time_open = trade['updateTime']
                         self.fees_open = float(trade['executedQty']) * float(trade['avgPrice']) * 0.00035
                         self.position = -1
-                        mongo.db_insert(
-                            self.symbol, 
-                            self.time_open,
-                            self.price_open,
-                            self.qtity,
-                            trade['side'],
-                            self.fees_open
-                        )
+                        # mongo.db_insert(
+                        #     self.symbol, 
+                        #     self.time_open,
+                        #     self.price_open,
+                        #     self.qtity,
+                        #     trade['side'],
+                        #     self.fees_open
+                        # )
                         print('{} | CLOSING LONG POSITION, OPENING SHORT | PNL: {}'.format(self.symbol, self.pnl))
 
                     except Exception as e:
@@ -303,14 +303,14 @@ class Bot:
                 self.price_close = float(tmp['avgPrice'])
                 self.pnl_gross = (self.price_close - self.price_open) * self.quantity_take_profit
                 self.pnl = self.pnl_gross - self.fees_total
-                mongo.db_update(
-                    self.symbol,
-                    self.time_open,
-                    tmp['updateTime'],
-                    self.price_close,
-                    self.fees_close,
-                    self.pnl
-                )
+                # mongo.db_update(
+                #     self.symbol,
+                #     self.time_open,
+                #     tmp['updateTime'],
+                #     self.price_close,
+                #     self.fees_close,
+                #     self.pnl
+                # )
                 self.take_profit = 0
                 self.position = 0
                 print("{} | LONG POSITION | STOP LOSS".format(self.symbol))
@@ -344,27 +344,27 @@ class Bot:
                         self.price_close = float(tmp['avgPrice'])
                         self.pnl_gross = (self.price_close - self.price_open) * self.qtity
                         self.pnl = self.pnl_gross - self.fees_total
-                        mongo.db_update(
-                            self.symbol,
-                            self.time_open,
-                            tmp['updateTime'],
-                            self.price_close,
-                            self.fees_close,
-                            self.pnl
-                        )
+                        # mongo.db_update(
+                        #     self.symbol,
+                        #     self.time_open,
+                        #     tmp['updateTime'],
+                        #     self.price_close,
+                        #     self.fees_close,
+                        #     self.pnl
+                        # )
                         self.qtity = float(trade['executedQty'])
                         self.price_open = float(trade['avgPrice'])
                         self.time_open = trade['updateTime']
                         self.fees_open = float(trade['executedQty']) * float(trade['avgPrice']) * 0.00035
                         self.position = 1
-                        mongo.db_insert(
-                            self.symbol, 
-                            self.time_open,
-                            self.price_open,
-                            self.qtity,
-                            trade['side'],
-                            self.fees_open
-                        )
+                        # mongo.db_insert(
+                        #     self.symbol, 
+                        #     self.time_open,
+                        #     self.price_open,
+                        #     self.qtity,
+                        #     trade['side'],
+                        #     self.fees_open
+                        # )
                         print('{} | CLOSING SHORT POSITION, OPENING LONG | PNL: {}'.format(self.symbol, self.pnl))
                     
                     except Exception as e:
@@ -387,14 +387,14 @@ class Bot:
                 self.price_close = float(tmp['avgPrice'])
                 self.pnl_gross = (self.price_open - self.price_close) * self.quantity_take_profit
                 self.pnl = self.pnl_gross - self.fees_total
-                mongo.db_update(
-                    self.symbol,
-                    self.time_open,
-                    tmp['updateTime'],
-                    self.price_close,
-                    self.fees_close,
-                    self.pnl
-                )
+                # mongo.db_update(
+                #     self.symbol,
+                #     self.time_open,
+                #     tmp['updateTime'],
+                #     self.price_close,
+                #     self.fees_close,
+                #     self.pnl
+                # )
                 self.take_profit = 0
                 self.position = 0
                 print("{} | SHORT POSITION | STOP LOSS".format(self.symbol))
@@ -424,14 +424,14 @@ class Bot:
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = self.price_close - self.price_open * self.quantity_take_profit
                     self.pnl = self.pnl_gross - self.fees_close
-                    mongo.db_update_tp(
-                        self.symbol,
-                        self.time_open,
-                        tmp['updateTime'],
-                        self.price_close,
-                        self.fees_close,
-                        self.pnl
-                    )
+                    # mongo.db_update_tp(
+                    #     self.symbol,
+                    #     self.time_open,
+                    #     tmp['updateTime'],
+                    #     self.price_close,
+                    #     self.fees_close,
+                    #     self.pnl
+                    # )
                     self.take_profit = 1
                     print('TAKING PROFIT FOR LONG POSITION ON {} | PNL: {}'.format(self.symbol, self.pnl))
                 
@@ -454,14 +454,14 @@ class Bot:
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = self.price_close - self.price_open * self.quantity_take_profit
                     self.pnl = self.pnl_gross - self.fees_close # or self.fees_close ?
-                    mongo.db_update_tp(
-                        self.symbol,
-                        self.time_open,
-                        tmp['updateTime'],
-                        self.price_close,
-                        self.fees_close,
-                        self.pnl
-                    )
+                    # mongo.db_update_tp(
+                    #     self.symbol,
+                    #     self.time_open,
+                    #     tmp['updateTime'],
+                    #     self.price_close,
+                    #     self.fees_close,
+                    #     self.pnl
+                    # )
                     self.take_profit = 1
                     print('TAKING PROFIT FOR SHORT POSITION ON {} | PNL: {}'.format(self.symbol, self.pnl))
             
@@ -483,14 +483,14 @@ class Bot:
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = (self.price_close - self.price_open) * self.quantity_take_profit
                     self.pnl = self.pnl_gross - self.fees_total
-                    mongo.db_update(
-                        self.symbol,
-                        self.time_open,
-                        tmp['updateTime'],
-                        self.price_close,
-                        self.fees_close,
-                        self.pnl
-                    )
+                    # mongo.db_update(
+                    #     self.symbol,
+                    #     self.time_open,
+                    #     tmp['updateTime'],
+                    #     self.price_close,
+                    #     self.fees_close,
+                    #     self.pnl
+                    # )
                     self.take_profit = 0
                     self.position = 0
                     print('{} (HIGH SAVE) CLOSING LONG POSITION | PNL: {}'.format(self.symbol, self.pnl))
@@ -506,14 +506,14 @@ class Bot:
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = (self.price_close - self.price_open) * self.quantity_take_profit
                     self.pnl = self.pnl_gross - self.fees_total
-                    mongo.db_update(
-                        self.symbol,
-                        self.time_open,
-                        tmp['updateTime'],
-                        self.price_close,
-                        self.fees_close,
-                        self.pnl
-                    )
+                    # mongo.db_update(
+                    #     self.symbol,
+                    #     self.time_open,
+                    #     tmp['updateTime'],
+                    #     self.price_close,
+                    #     self.fees_close,
+                    #     self.pnl
+                    # )
                     self.take_profit = 0
                     self.position = 0
                     print('{} (LOW SAVE) CLOSING LONG POSITION | PNL: {}'.format(self.symbol, self.pnl))
@@ -535,14 +535,14 @@ class Bot:
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = (self.price_open - self.price_close) * self.quantity_take_profit
                     self.pnl = self.pnl_gross - self.fees_total
-                    mongo.db_update(
-                        self.symbol,
-                        self.time_open,
-                        tmp['updateTime'],
-                        self.price_close,
-                        self.fees_close,
-                        self.pnl
-                    )
+                    # mongo.db_update(
+                    #     self.symbol,
+                    #     self.time_open,
+                    #     tmp['updateTime'],
+                    #     self.price_close,
+                    #     self.fees_close,
+                    #     self.pnl
+                    # )
                     self.take_profit = 0
                     self.position = 0
                     print('{} (HIGH SAVE) CLOSING SHORT POSITION | PNL: {}'.format(self.symbol, self.pnl))
@@ -558,14 +558,14 @@ class Bot:
                     self.price_close = float(tmp['avgPrice'])
                     self.pnl_gross = (self.price_open - self.price_close) * self.quantity_take_profit
                     self.pnl = self.pnl_gross - self.fees_total
-                    mongo.db_update(
-                        self.symbol,
-                        self.time_open,
-                        tmp['updateTime'],
-                        self.price_close,
-                        self.fees_close,
-                        self.pnl
-                    )
+                    # mongo.db_update(
+                    #     self.symbol,
+                    #     self.time_open,
+                    #     tmp['updateTime'],
+                    #     self.price_close,
+                    #     self.fees_close,
+                    #     self.pnl
+                    # )
                     self.take_profit = 0
                     self.position = 0
                     print('{} (LOW SAVE) CLOSING SHORT POSITION | PNL: {}'.format(self.symbol, self.pnl))
