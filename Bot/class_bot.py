@@ -16,7 +16,7 @@ def Sum(list):
         sum += float(item['med'])
     return sum/len(list)
 
-def Order(Symbol, Leverage, Percentage, Side, Price):
+def Order(Symbol, Leverage, Precision, Percentage, Side, Price):
     '''
     Creates a market-type order on the futures market, given certain arguments: Symbol, Leverage, Side and Price.
     The function will first check the ```production``` boolean in the ```config.py``` file. The function will then calculate a 
@@ -34,7 +34,7 @@ def Order(Symbol, Leverage, Percentage, Side, Price):
                 leverage = Leverage
             )
             
-            Quantity = (Quantity * Leverage)
+            Quantity = round((Quantity * Leverage), Precision)
             
             close = client.futures_create_order(
                 symbol = Symbol,
@@ -77,7 +77,7 @@ def ClosePosition(Symbol, Side, Quantity):
 
 class Bot:
 
-    def __init__(self, symbol, fast, slow, leverage, percentage):
+    def __init__(self, symbol, fast, slow, leverage, percentage, precision):
         self.symbol = symbol
         self.fast = fast
         self.slow = slow
@@ -88,6 +88,7 @@ class Bot:
         self.price_open = 0
         self.leverage = leverage
         self.percentage = percentage
+        self.precision = precision
         self.qtity = 0
         self.fees_open = 0
         self.fees_close = 0
@@ -167,6 +168,7 @@ class Bot:
                         trade = Order(
                             Symbol=self.symbol,
                             Leverage=self.leverage,
+                            Precision=self.precision,
                             Percentage=self.percentage,
                             Side=SIDE_BUY,
                             Price=self.data[-1]['close']
@@ -202,6 +204,7 @@ class Bot:
                         trade = Order(
                             Symbol=self.symbol,
                             Leverage=self.leverage,
+                            Precision=self.precision,
                             Percentage=self.percentage,
                             Side=SIDE_SELL,
                             Price=self.data[-1]['close']
@@ -247,6 +250,7 @@ class Bot:
                         trade = Order(
                             Symbol=self.symbol, 
                             Leverage=self.leverage,
+                            Precision=self.precision,
                             Percentage=self.percentage, 
                             Side=SIDE_SELL, 
                             Price=self.data[-1]['close']
@@ -329,7 +333,8 @@ class Bot:
                         )
                         trade = Order(
                             Symbol=self.symbol, 
-                            Leverage=self.leverage, 
+                            Leverage=self.leverage,
+                            Precision=self.precision,
                             Percentage=self.percentage, 
                             Side=SIDE_BUY, 
                             Price=self.data[-1]['close']
@@ -408,7 +413,7 @@ class Bot:
                 
                 if ((self.data[-1]['close'] - self.price_open) / self.price_open) * self.leverage > 0.035: # If take profit condition is met
                     # TODO: Quantity
-                    self.quantity_take_profit = self.qtity / 2
+                    self.quantity_take_profit = round(self.qtity / 2, self.precision)
                     self.qtity = self.qtity - self.quantity_take_profit
                     tmp = ClosePosition(
                         Symbol = self.symbol,
@@ -438,7 +443,7 @@ class Bot:
                 
                 if ((self.data[-1]['close'] - self.price_open) / self.price_open) * self.leverage < -0.035: # If take profit condition is met
                     # TODO: Quantity
-                    self.quantity_take_profit = self.qtity / 2
+                    self.quantity_take_profit = round(self.qtity / 2, self.precision)
                     self.qtity = self.qtity - self.quantity_take_profit
                     tmp = ClosePosition(
                         Symbol = self.symbol,

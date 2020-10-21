@@ -23,7 +23,8 @@ for bot in config_bot.bots:
         bot['fast_trend'],
         bot['slow_trend'],
         bot['leverage'],
-        bot['percentage']
+        bot['percentage'],
+        bot['precision']
     )
     socket += bot['pair'].lower() + "@kline_1h/"
     print('Bot: {}'.format(bot))
