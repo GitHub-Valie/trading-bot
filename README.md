@@ -30,4 +30,8 @@ A median price will be calculated (high + low / 2). See the 'next' function in `
 
 ## Strategy
 
+## Logic behind decisions
+
+<img src="https://raw.githubusercontent.com/GitHub-Valie/trading-bot/master/flowchart.png" />
+
 
